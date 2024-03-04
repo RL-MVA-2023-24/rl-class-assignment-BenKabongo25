@@ -4,7 +4,7 @@ from collections import deque
 from datetime import datetime
 from enum import Enum
 from time import time, sleep
-from tqdm import tqdm
+#from tqdm import tqdm
 from typing import Callable, Dict, Optional, Tuple, Union
 
 import argparse
@@ -1612,8 +1612,9 @@ def evaluate(
     num_successes = 0
     total_steps = 0
 
-    progress_bar = tqdm(range(1, 1 + eval_episodes))
-    for i_episode in progress_bar:
+    #progress_bar = tqdm(range(1, 1 + eval_episodes))
+    #for i_episode in progress_bar:
+    for i_episode in range(1, 1 + eval_episodes)
         agent.context_reset(eval_env.reset()[0])
         done = False
         ep_reward = 0
@@ -1623,7 +1624,7 @@ def evaluate(
             done = done or trunc
             agent.observe(obs_next, action, reward, done)
             ep_reward += reward
-            progress_bar.set_description(f"[Eval {i_episode}/{eval_episodes}] Ep. reward = {ep_reward}")
+            #progress_bar.set_description(f"[Eval {i_episode}/{eval_episodes}] Ep. reward = {ep_reward}")
         total_reward += ep_reward
         total_steps += agent.context.timestep
         if ep_reward > 0:
@@ -1663,8 +1664,9 @@ def train(
     env = RNG.rng.choice(envs)
     agent.context_reset(env.reset()[0])
 
-    progress_bar = tqdm(range(agent.num_train_steps, total_steps))
-    for timestep in progress_bar:
+    #progress_bar = tqdm(range(agent.num_train_steps, total_steps))
+    #for timestep in progress_bar:
+    for timestep in range(agent.num_train_steps, total_steps):
         done = step(agent, env, eps)
 
         if done:
@@ -1709,7 +1711,7 @@ def train(
                     f"[ {timestamp()} ] Training Steps: {timestep}, Success Rate: {sr:.2f}, Return: {ret:.2f}, Episode Length: {length:.2f}, Hours: {hours:.2f}"
                 )
 
-        if timestep % 50_000 == 0:
+        if timestep % 5_000 == 0:
             torch.save(agent.policy_network.state_dict(), policy_path)
 
 
@@ -1724,19 +1726,19 @@ def step(agent: DtqnAgent, env: gym.Env, eps: float) -> bool:
 
 def prepopulate(agent: DtqnAgent, prepop_steps: int, envs: Tuple[gym.Env]) -> None:
     timestep = 0
-    with tqdm(total=prepop_steps, desc="Prepopulating") as progress_bar:
-        while timestep < prepop_steps:
-            env = RNG.rng.choice(envs)
-            agent.context_reset(env.reset()[0])
-            done = False
-            while not done:
-                action = RNG.rng.integers(env.action_space.n)
-                next_obs, reward, done, trunc, info = env.step(action)
-                done = done or trunc
-                agent.observe(next_obs, action, reward, done)
-                timestep += 1
-                progress_bar.update(1)
-            agent.replay_buffer.flush()
+    #with tqdm(total=prepop_steps, desc="Prepopulating") as progress_bar:
+    while timestep < prepop_steps:
+        env = RNG.rng.choice(envs)
+        agent.context_reset(env.reset()[0])
+        done = False
+        while not done:
+            action = RNG.rng.integers(env.action_space.n)
+            next_obs, reward, done, trunc, info = env.step(action)
+            done = done or trunc
+            agent.observe(next_obs, action, reward, done)
+            timestep += 1
+            #progress_bar.update(1)
+        agent.replay_buffer.flush()
 
 
 def run_experiment(args, envs: Tuple[gym.Env], eval_envs: Tuple[gym.Env]):
@@ -1782,12 +1784,11 @@ def run_experiment(args, envs: Tuple[gym.Env], eval_envs: Tuple[gym.Env]):
         f"batch={args.batch}_gate={args.gate}_identity={args.identity}_history={args.history}_pos={args.pos}_bag={args.bag_size}_seed={args.seed}",
     )
 
-    # Enjoy mode
-    if args.render:
+    if os.path.exists(policy_path):
+        print("Load policy")
         agent.policy_network.load_state_dict(
             torch.load(policy_path, map_location="cpu")
         )
-        evaluate(agent, eval_envs[0], 1_000_000, render=True)
 
     # If there is already a saved checkpoint, load it and resume training if more steps are needed
     # Or exit early if we have already finished training.
